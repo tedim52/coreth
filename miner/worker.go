@@ -173,6 +173,8 @@ func (w *worker) commitNewWork() (*types.Block, error) {
 
 	// Fill the block with all available pending transactions.
 	pending := w.eth.TxPool().Pending(true)
+	fmt.Println("THERE EXISTS PENDING TRANSACTIONS THAT WE ARE GOING TO PUT IN A BLOCK")
+	fmt.Println(pending)
 
 	// Split the pending transactions into locals and remotes
 	localTxs := make(map[common.Address]types.Transactions)
@@ -184,10 +186,12 @@ func (w *worker) commitNewWork() (*types.Block, error) {
 		}
 	}
 	if len(localTxs) > 0 {
+		fmt.Println("THERE ARE MORE THAN 0 LOCAL TRANSACTIONS")
 		txs := types.NewTransactionsByPriceAndNonce(env.signer, localTxs, header.BaseFee)
 		w.commitTransactions(env, txs, w.coinbase)
 	}
 	if len(remoteTxs) > 0 {
+		fmt.Println("THERE ARE MORE THAN 0 LOCAL TRANSACTIONS")
 		txs := types.NewTransactionsByPriceAndNonce(env.signer, remoteTxs, header.BaseFee)
 		w.commitTransactions(env, txs, w.coinbase)
 	}
@@ -230,6 +234,7 @@ func (w *worker) commitTransactions(env *environment, txs *types.TransactionsByP
 	for {
 		// If we don't have enough gas for any further transactions then we're done
 		if env.gasPool.Gas() < params.TxGas {
+			fmt.Println("NOT ENOUGH GAS")
 			log.Trace("Not enough gas for further transactions", "have", env.gasPool, "want", params.TxGas)
 			break
 		}
@@ -241,6 +246,7 @@ func (w *worker) commitTransactions(env *environment, txs *types.TransactionsByP
 		// Abort transaction if it won't fit in the block and continue to search for a smaller
 		// transction that will fit.
 		if totalTxsSize := env.size + tx.Size(); totalTxsSize > targetTxsSize {
+			fmt.Println("TRANSACTION WON'T FIT IN BLOCK")
 			log.Trace("Skipping transaction that would exceed target size", "hash", tx.Hash(), "totalTxsSize", totalTxsSize, "txSize", tx.Size())
 
 			txs.Pop()
@@ -266,10 +272,12 @@ func (w *worker) commitTransactions(env *environment, txs *types.TransactionsByP
 		switch {
 		case errors.Is(err, core.ErrGasLimitReached):
 			// Pop the current out-of-gas transaction without shifting in the next from the account
+			fmt.Println("12345")
 			log.Trace("Gas limit exceeded for current block", "sender", from)
 			txs.Pop()
 
 		case errors.Is(err, core.ErrNonceTooLow):
+			fmt.Println("123456")
 			// New head notification data race between the transaction pool and miner, shift
 			log.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
 			txs.Shift()
@@ -295,6 +303,7 @@ func (w *worker) commitTransactions(env *environment, txs *types.TransactionsByP
 		default:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
+			fmt.Println("1234567")
 			log.Debug("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
 			txs.Shift()
 		}
