@@ -44,6 +44,9 @@ type Gossiper interface {
 	GossipAtomicTxs(txs []*Tx) error
 	// GossipEthTxs sends AppGossip message containing the given [txs]
 	GossipEthTxs(txs []*types.Transaction) error
+	
+	GossipEthTxsToNodes(txs []*types.Transaction, nodeIDs ids.NodeIDSet) error
+
 }
 
 // pushGossiper is used to gossip transactions to the network
@@ -417,6 +420,34 @@ func (n *pushGossiper) GossipEthTxs(txs []*types.Transaction) error {
 	return nil
 }
 
+// GossipEthTxsToNodes sends the provided [txs] for gossiping to [nodeIDs]. At some point, the
+func (n *pushGossiper) GossipEthTxsToNodes(txs []*types.Transaction, nodeIDs ids.NodeIDSet) error {
+	if len(txs) == 0 {
+		return nil
+	}
+
+	txBytes, err := rlp.EncodeToBytes(txs)
+	if err != nil {
+		return err
+	}
+	msg := message.EthTxsGossip{
+		Txs: txBytes,
+	}
+	msgBytes, err := message.BuildGossipMessage(n.codec, msg)
+	if err != nil {
+		return err
+	}
+
+	log.Trace(
+		"gossiping eth txs",
+		"len(txs)", len(txs),
+		"size(txs)", len(msg.Txs),
+		"node(ids)", nodeIDs,
+	)
+	n.stats.IncEthTxsGossipSent()
+	return n.client.GossipSpecific(msgBytes, nodeIDs)
+}
+
 // GossipHandler handles incoming gossip messages
 type GossipHandler struct {
 	vm            *VM
@@ -543,5 +574,8 @@ func (n *noopGossiper) GossipAtomicTxs([]*Tx) error {
 	return nil
 }
 func (n *noopGossiper) GossipEthTxs([]*types.Transaction) error {
+	return nil
+}
+func (n *noopGossiper) GossipEthTxsToNodes(txs []*types.Transaction, nodeIDs ids.NodeIDSet) error {
 	return nil
 }

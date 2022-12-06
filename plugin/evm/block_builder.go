@@ -6,6 +6,7 @@ package evm
 import (
 	"sync"
 	"time"
+	"fmt"
 
 	"github.com/ava-labs/coreth/params"
 
@@ -190,9 +191,19 @@ func (b *blockBuilder) awaitSubmittedTxs() {
 					// Give time for this node to build a block before attempting to
 					// gossip
 					time.Sleep(waitBlockTime)
-					// [GossipEthTxs] will block unless [gossiper.ethTxsToGossipChan] (an
-					// unbuffered channel) is listened on
-					if err := b.gossiper.GossipEthTxs(ethTxsEvent.Txs); err != nil {
+
+					// Retrieve list of proposer
+					proposers, err := b.ctx.ProposerRetriever.GetCurrentProposers()
+					proposerString := fmt.Sprintf("CURRENT PROPOSERS: %v\n", proposers)
+					if err != nil {
+						log.Warn(
+							"failed to retrieve list of proposers",
+							"err", err,
+						)			
+					}
+					fmt.Println(proposerString)
+					// Gossip transactions only to list of proposers
+					if err := b.gossiper.GossipEthTxsToNodes(ethTxsEvent.Txs, proposers); err != nil {
 						log.Warn(
 							"failed to gossip new eth transactions",
 							"err", err,
