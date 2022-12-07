@@ -545,6 +545,33 @@ func (s *TxByPriceAndTime) Pop() interface{} {
 	return x
 }
 
+type TxByPriceAndTimeAndCollisions []*TxWithMinerFeeAndCollisions
+
+func (s TxByPriceAndTimeAndCollisions) Len() int { return len(s) }
+func (s TxByPriceAndTimeAndCollisions) Less(i, j int) bool {
+	// If the prices are equal, use the time the transaction was first seen for
+	// deterministic sorting
+	// cmp := s[i].minerFee.Cmp(s[j].minerFee)
+	cmp := s[i].numCollisions.Cmp(s[j].numCollisions)
+	if cmp == 0 {
+		return s[i].Tx.time.Before(s[j].Tx.time)
+	}
+	return cmp > 0
+}
+func (s TxByPriceAndTimeAndCollisions) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+func (s *TxByPriceAndTimeAndCollisions) Push(x interface{}) {
+	*s = append(*s, x.(*TxWithMinerFeeAndCollisions))
+}
+
+func (s *TxByPriceAndTimeAndCollisions) Pop() interface{} {
+	old := *s
+	n := len(old)
+	x := old[n-1]
+	*s = old[0 : n-1]
+	return x
+}
+
 // TransactionsByPriceAndNonce represents a set of transactions that can return
 // transactions in a profit-maximizing sorted order, while supporting removing
 // entire batches of transactions for non-executable accounts.
