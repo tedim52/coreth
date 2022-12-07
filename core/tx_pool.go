@@ -619,6 +619,13 @@ func (pool *TxPool) PendingSize() int {
 	return count
 }
 
+func (pool *TxPool) Collisions() map[common.Hash]uint64 {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	return pool.txCollisions
+}
+
 // Locals retrieves the accounts currently considered local by the pool.
 func (pool *TxPool) Locals() []common.Address {
 	pool.mu.Lock()
