@@ -499,6 +499,24 @@ func NewTxWithMinerFee(tx *Transaction, baseFee *big.Int) (*TxWithMinerFee, erro
 	}, nil
 }
 
+type TxWithMinerFeeAndCollisions struct {
+	Tx       *Transaction
+	minerFee *big.Int
+	numCollisions *big.Int
+}
+
+func NewTxWithMinerFeeAndCollisions(tx *Transaction, baseFee *big.Int, numCollisions *big.Int) (*TxWithMinerFee, error) {
+	minerFee, err := tx.EffectiveGasTip(baseFee)
+	if err != nil {
+		return nil, err
+	}
+	return &TxWithMinerFeeAndCollisions{
+		Tx:       tx,
+		minerFee: minerFee,
+		numCollisions: numCollisions,
+	}, nil
+}
+
 // TxByPriceAndTime implements both the sort and the heap interface, making it useful
 // for all at once sorting as well as individually adding and removing elements.
 type TxByPriceAndTime []*TxWithMinerFee
