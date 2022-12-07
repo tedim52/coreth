@@ -505,7 +505,7 @@ type TxWithMinerFeeAndCollisions struct {
 	numCollisions *big.Int
 }
 
-func NewTxWithMinerFeeAndCollisions(tx *Transaction, baseFee *big.Int, numCollisions *big.Int) (*TxWithMinerFee, error) {
+func NewTxWithMinerFeeAndCollisions(tx *Transaction, baseFee *big.Int, numCollisions *big.Int) (*TxWithMinerFeeAndCollisions, error) {
 	minerFee, err := tx.EffectiveGasTip(baseFee)
 	if err != nil {
 		return nil, err
