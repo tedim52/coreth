@@ -499,6 +499,24 @@ func NewTxWithMinerFee(tx *Transaction, baseFee *big.Int) (*TxWithMinerFee, erro
 	}, nil
 }
 
+type TxWithMinerFeeAndCollisions struct {
+	Tx       *Transaction
+	minerFee *big.Int
+	numCollisions *big.Int
+}
+
+func NewTxWithMinerFeeAndCollisions(tx *Transaction, baseFee *big.Int, numCollisions *big.Int) (*TxWithMinerFeeAndCollisions, error) {
+	minerFee, err := tx.EffectiveGasTip(baseFee)
+	if err != nil {
+		return nil, err
+	}
+	return &TxWithMinerFeeAndCollisions{
+		Tx:       tx,
+		minerFee: minerFee,
+		numCollisions: numCollisions,
+	}, nil
+}
+
 // TxByPriceAndTime implements both the sort and the heap interface, making it useful
 // for all at once sorting as well as individually adding and removing elements.
 type TxByPriceAndTime []*TxWithMinerFee
@@ -520,6 +538,33 @@ func (s *TxByPriceAndTime) Push(x interface{}) {
 }
 
 func (s *TxByPriceAndTime) Pop() interface{} {
+	old := *s
+	n := len(old)
+	x := old[n-1]
+	*s = old[0 : n-1]
+	return x
+}
+
+type TxByPriceAndTimeAndCollisions []*TxWithMinerFeeAndCollisions
+
+func (s TxByPriceAndTimeAndCollisions) Len() int { return len(s) }
+func (s TxByPriceAndTimeAndCollisions) Less(i, j int) bool {
+	// If the prices are equal, use the time the transaction was first seen for
+	// deterministic sorting
+	// cmp := s[i].minerFee.Cmp(s[j].minerFee)
+	cmp := s[i].numCollisions.Cmp(s[j].numCollisions)
+	if cmp == 0 {
+		return s[i].Tx.time.Before(s[j].Tx.time)
+	}
+	return cmp > 0
+}
+func (s TxByPriceAndTimeAndCollisions) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+func (s *TxByPriceAndTimeAndCollisions) Push(x interface{}) {
+	*s = append(*s, x.(*TxWithMinerFeeAndCollisions))
+}
+
+func (s *TxByPriceAndTimeAndCollisions) Pop() interface{} {
 	old := *s
 	n := len(old)
 	x := old[n-1]

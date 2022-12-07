@@ -5,9 +5,11 @@ package evm
 
 import (
 	"container/heap"
+	"sort"
 	"math/big"
 	"sync"
 	"time"
+	"fmt"
 
 	"github.com/ava-labs/avalanchego/codec"
 
@@ -109,8 +111,9 @@ func (vm *VM) createGossiper(stats GossipStats) Gossiper {
 // account. This array of transactions can have gaps and start at a nonce lower
 // than the current state of an account.
 func (n *pushGossiper) queueExecutableTxs(state *state.StateDB, baseFee *big.Int, txs map[common.Address]types.Transactions, maxTxs int) types.Transactions {
+	txCollisions := n.txPool.Collisions()
 	// Setup heap for transactions
-	heads := make(types.TxByPriceAndTime, 0, len(txs))
+	heads := make(types.TxByPriceAndTimeAndCollisions, 0, len(txs))
 	for addr, accountTxs := range txs {
 		// Short-circuit here to avoid performing an unnecessary state lookup
 		if len(accountTxs) == 0 {
@@ -145,8 +148,15 @@ func (n *pushGossiper) queueExecutableTxs(state *state.StateDB, baseFee *big.Int
 			continue
 		}
 
+		// Retrieve num collisions
+		numCollisions, exists := txCollisions[tx.Hash()]
+		if !exists {
+			// this should not happen, because all transactions pulled from tx pool should have an entry in collisions map
+			continue
+		}
+
 		// Ensure the fee the transaction pays is valid at tip
-		wrapped, err := types.NewTxWithMinerFee(tx, baseFee)
+		wrapped, err := types.NewTxWithMinerFeeAndCollisions(tx, baseFee, big.NewInt(numCollisions))
 		if err != nil {
 			log.Debug(
 				"not queuing tx for regossip",
@@ -159,6 +169,13 @@ func (n *pushGossiper) queueExecutableTxs(state *state.StateDB, baseFee *big.Int
 		heads = append(heads, wrapped)
 	}
 	heap.Init(&heads)
+
+	fmt.Printf("TXS PRESORT: %v\n", heads)
+
+	// sort heap by
+	sort.Sort(heads)
+
+	fmt.Printf("TXS POSTSORT: %v\n", heads)
 
 	// Add up to [maxTxs] transactions to be gossiped
 	queued := make([]*types.Transaction, 0, maxTxs)
