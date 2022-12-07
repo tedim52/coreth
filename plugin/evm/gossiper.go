@@ -5,6 +5,7 @@ package evm
 
 import (
 	"container/heap"
+	"sort"
 	"math/big"
 	"sync"
 	"time"
@@ -167,6 +168,13 @@ func (n *pushGossiper) queueExecutableTxs(state *state.StateDB, baseFee *big.Int
 		heads = append(heads, wrapped)
 	}
 	heap.Init(&heads)
+
+	fmt.Printf("TXS PRESORT: %v\n", heap)
+
+	// sort heap by
+	sort.Sort(heap)
+
+	fmt.Printf("TXS POSTSORT: %v\n", heap)
 
 	// Add up to [maxTxs] transactions to be gossiped
 	queued := make([]*types.Transaction, 0, maxTxs)
