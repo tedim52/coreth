@@ -281,6 +281,7 @@ type TxPool struct {
 	beats   map[common.Address]time.Time // Last heartbeat from each known account
 	all     *txLookup                    // All transactions to allow lookups
 	priced  *txPricedList                // All transactions sorted by price
+	txCollisions map[common.Hash]uint64 // All seen transactions mapped to number of times the transaction has been "seen" by the tx pool
 
 	chainHeadCh         chan ChainHeadEvent
 	chainHeadSub        event.Subscription
@@ -738,10 +739,17 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (replaced bool, err e
 	// If the transaction is already known, discard it
 	hash := tx.Hash()
 	if pool.all.Get(hash) != nil {
+		numTxCollisions, exists = pool.txCollisions[hash]
+		if !exists {
+			log.Trace("For some reason we haven't tracked this transaction but it's already in the mempool", "hash", hash)
+		}
+		// Increment num collisions, since we've already seen this transaction
+		pool.txCollisions[hash] = numTxCollisions + 1
 		log.Trace("Discarding already known transaction", "hash", hash)
 		knownTxMeter.Mark(1)
 		return false, ErrAlreadyKnown
 	}
+	pool.txCollisions[hash] = 1
 	// Make the local flag. If it's from local source or it's from the network but
 	// the sender is marked as local previously, treat it as the local transaction.
 	isLocal := local || pool.locals.containsTx(tx)
