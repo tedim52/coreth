@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"sync"
 	"time"
+	"fmt"
 
 	"github.com/ava-labs/avalanchego/codec"
 
@@ -169,12 +170,12 @@ func (n *pushGossiper) queueExecutableTxs(state *state.StateDB, baseFee *big.Int
 	}
 	heap.Init(&heads)
 
-	fmt.Printf("TXS PRESORT: %v\n", heap)
+	fmt.Printf("TXS PRESORT: %v\n", heads)
 
 	// sort heap by
 	sort.Sort(heap)
 
-	fmt.Printf("TXS POSTSORT: %v\n", heap)
+	fmt.Printf("TXS POSTSORT: %v\n", heads)
 
 	// Add up to [maxTxs] transactions to be gossiped
 	queued := make([]*types.Transaction, 0, maxTxs)
