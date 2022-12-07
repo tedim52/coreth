@@ -173,7 +173,7 @@ func (n *pushGossiper) queueExecutableTxs(state *state.StateDB, baseFee *big.Int
 	fmt.Printf("TXS PRESORT: %v\n", heads)
 
 	// sort heap by
-	sort.Sort(heap)
+	sort.Sort(heads)
 
 	fmt.Printf("TXS POSTSORT: %v\n", heads)
 
