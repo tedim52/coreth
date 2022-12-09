@@ -251,6 +251,7 @@ type TxPool struct {
 	chain       blockChain
 	gasPrice    *big.Int
 	minimumFee  *big.Int
+	enqFeed      event.Feed
 	txFeed      event.Feed
 	headFeed    event.Feed
 	reorgFeed   event.Feed
@@ -455,6 +456,10 @@ func (pool *TxPool) Stop() {
 		pool.journal.close()
 	}
 	log.Info("Transaction pool stopped")
+}
+
+func (pool *TxPool) SubscribeEnqueueTxsEvent(ch chan<- NewTxsEvent) event.Subscription {
+	return pool.scope.Track(pool.enqFeed.Subscribe(ch))
 }
 
 // SubscribeNewTxsEvent registers a subscription of NewTxsEvent and
@@ -856,6 +861,9 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction, local boo
 		queuedReplaceMeter.Mark(1)
 	} else {
 		// Nothing was replaced, bump the queued counter
+		var txs []*types.Transaction
+		txs = append(txs, tx)
+		pool.enqFeed.Send(NewTxsEvent{txs})
 		queuedGauge.Inc(1)
 	}
 	// If the transaction isn't in lookup set but it's expected to be there,

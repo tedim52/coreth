@@ -350,6 +350,10 @@ func (b *EthAPIBackend) TxPoolContentFrom(addr common.Address) (types.Transactio
 	return b.eth.txPool.ContentFrom(addr)
 }
 
+func (b *EthAPIBackend) SubscribeEnqueueTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
+	return b.eth.txPool.SubscribeEnqueueTxsEvent(ch)
+}
+
 func (b *EthAPIBackend) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
 	return b.eth.txPool.SubscribeNewTxsEvent(ch)
 }
